@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// generator client {
+//   provider = "prisma-client-js"
+//   output   = "../generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------
+// Enums
+// ------------------------------------
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserRole {
+  CUSTOMER
+  SERVICE_PROVIDER
+  ADMIN
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ------------------------------------
+// User
+// ------------------------------------
+model User {
+  id        String     @id @default(uuid())
+  email     String?    @unique
+  phone     String?    @unique
+  password  String?
+  googleId  String?    @unique
+  //socialId   String?    @unique
+  role      UserRole   @default(CUSTOMER)
+  status    UserStatus @default(INACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  verificationTokens VerificationToken[]
+  failedLogins       FailedLogin[]
+}
+
+// ------------------------------------
+// Verification Token
+// ------------------------------------
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String
+  type      TokenType
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ------------------------------------
+// (Optional) Failed Login Attempts
+// ------------------------------------
+model FailedLogin {
+  id        String   @id @default(uuid())
+  userId    String
+  attemptAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
