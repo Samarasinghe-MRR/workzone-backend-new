@@ -1,0 +1,15 @@
+# Job Service Specific Ignores
+
+# Job attachments
+job-attachments/
+uploads/jobs/
+
+# Job reports and exports
+job-reports/
+job-exports/
+
+# Temporary job data
+temp-jobs/
+
+# Job search cache
+job-search-cache/

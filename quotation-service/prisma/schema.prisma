@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Track which providers were invited to quote on specific jobs
+model JobQuotationInvite {
+    id             String       @id @default(uuid())
+    job_id         String
+    provider_id    String
+    provider_email String
+    job_category   String // e.g., "plumbing", "electrical"
+    distance_km    Float? // distance from job location to provider
+    invited_at     DateTime     @default(now())
+    expires_at     DateTime // invitation expires after X hours
+    responded      Boolean      @default(false)
+    response_at    DateTime?
+    status         InviteStatus @default(INVITED)
+
+    // Job details cached for quick access
+    job_title    String?
+    job_location String?
+    customer_id  String?
+
+    // Relations
+    quotations Quotation[] // All quotes submitted for this invitation
+
+    @@unique([job_id, provider_id]) // One invite per provider per job
+    @@map("job_quotation_invites")
+}
+
+enum InviteStatus {
+    INVITED // Provider was invited (based on location & category)
+    RESPONDED // Provider submitted a quotation
+    IGNORED // Did not respond until expiry
+    EXPIRED // Invitation expired
+}
+
+model Quotation {
+    id             String      @id @default(uuid())
+    job_id         String
+    provider_id    String
+    provider_email String
+    invite_id      String? // Links back to the invitation
+    price          Float
+    estimated_time String? // e.g., "2 hours", "1 day"
+    message        String? // provider's custom note/description
+    status         QuoteStatus @default(PENDING)
+    created_at     DateTime    @default(now())
+    updated_at     DateTime    @updatedAt
+
+    // Extended fields based on UI requirements
+    proposed_start DateTime? // when provider can start - e.g., "Today 3:00 PM"
+    includes_tools Boolean   @default(false) // provider brings own tools
+    eco_friendly   Boolean   @default(false) // eco-friendly service option
+    valid_until    DateTime? // quote expiry date
+
+    // Additional service details
+    warranty_period String? // e.g., "1 year", "6 months"
+    materials_cost  Float? // separate materials cost
+    labor_cost      Float? // separate labor cost
+
+    // Customer interaction
+    customer_notes String? // customer's special requests/notes
+    accepted_at    DateTime?
+    rejected_at    DateTime?
+    cancelled_at   DateTime?
+
+    // Response timing analytics
+    response_time_hours Int? // How long after invitation was this quote submitted
+
+    // Relations
+    invitation JobQuotationInvite? @relation(fields: [invite_id], references: [id])
+
+    @@map("quotations")
+}
+
+enum QuoteStatus {
+    PENDING // provider sent quote, awaiting customer response
+    ACCEPTED // customer accepted this quote
+    REJECTED // customer rejected this quote
+    CANCELLED // provider cancelled/withdrew their quote
+    EXPIRED // quote expired (past valid_until date)
+}
+
+// Event tracking for microservice communication
+model QuoteEvent {
+    id          String    @id @default(uuid())
+    event_type  EventType // Structured event types
+    quote_id    String? // nullable for invite events
+    invite_id   String? // for invitation-related events
+    job_id      String
+    provider_id String
+    customer_id String?
+    payload     Json // event data
+    processed   Boolean   @default(false)
+    created_at  DateTime  @default(now())
+
+    @@map("quote_events")
+}
+
+enum EventType {
+    // Invitation events
+    QUOTE_INVITED // Provider was invited to quote
+    INVITE_EXPIRED // Invitation expired without response
+
+    // Quote lifecycle events
+    QUOTE_SUBMITTED // Provider submitted a quotation
+    QUOTE_UPDATED // Provider updated their quotation
+    QUOTE_WITHDRAWN // Provider cancelled/withdrew their quote
+
+    // Customer decision events
+    QUOTE_ACCEPTED // Customer accepted this quote
+    QUOTE_REJECTED // Customer rejected this quote
+
+    // System events
+    QUOTE_EXPIRED // Quote expired (past valid_until date)
+    PROVIDER_IGNORED // Provider ignored invitation
+}
+
+// Quotation analytics and metrics
+model QuotationMetrics {
+    id          String @id @default(uuid())
+    provider_id String
+
+    // Invitation metrics
+    total_invites   Int @default(0) // How many jobs provider was invited to
+    total_responses Int @default(0) // How many invites provider responded to
+    ignored_invites Int @default(0) // How many invites provider ignored
+
+    // Quote submission metrics
+    total_quotes     Int @default(0) // Total quotes submitted
+    accepted_quotes  Int @default(0) // Quotes accepted by customers
+    rejected_quotes  Int @default(0) // Quotes rejected by customers
+    withdrawn_quotes Int @default(0) // Quotes withdrawn by provider
+
+    // Performance metrics
+    average_price               Float? // Average quote price
+    average_response_time_hours Int? // Average time to respond to invitations
+    response_rate               Float? // Percentage of invites that got responses
+    success_rate                Float? // Percentage of quotes that got accepted
+
+    // Geographic metrics
+    average_distance_km Float? // Average distance from jobs
+    max_distance_km     Float? // Furthest job provider quoted for
+
+    // Time-based metrics
+    last_invite_at DateTime? // Last time provider was invited
+    last_quote_at  DateTime? // Last time provider submitted a quote
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@unique([provider_id]) // One metrics record per provider
+    @@map("quotation_metrics")
+}
+
+// Job eligibility settings and criteria
+model JobEligibilityCriteria {
+    id                    String @id @default(uuid())
+    job_id                String @unique
+    max_distance_km       Float  @default(10.0) // Maximum distance for provider eligibility
+    required_category     String // Job category (plumbing, electrical, etc.)
+    min_provider_rating   Float? // Minimum provider rating required
+    max_providers_invited Int    @default(10) // Maximum number of providers to invite
+    invite_expires_hours  Int    @default(24) // How long invites are valid
+
+    // Geographic constraints
+    job_latitude  Float?
+    job_longitude Float?
+    job_address   String?
+
+    // Timing constraints
+    preferred_start DateTime?
+    deadline        DateTime?
+
+    // Special requirements
+    requires_tools    Boolean @default(false)
+    eco_friendly_only Boolean @default(false)
+    emergency_job     Boolean @default(false)
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@map("job_eligibility_criteria")
+}

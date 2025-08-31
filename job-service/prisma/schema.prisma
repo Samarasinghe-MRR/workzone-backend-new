@@ -1,0 +1,169 @@
+// Job Service Database Schema - Focused on Core Job Management
+generator client {
+    provider = "prisma-client-js"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ------------------------------------
+// Enums
+// ------------------------------------
+enum JobStatus {
+    PENDING // Job created, waiting for providers
+    OPEN // Job published and open for quotes
+    IN_PROGRESS // Provider assigned and working
+    COMPLETED // Job finished
+    CANCELLED // Job cancelled by customer
+}
+
+enum AssignmentStatus {
+    ASSIGNED // Provider assigned to job
+    ACCEPTED // Provider accepted the assignment
+    REJECTED // Provider rejected the assignment
+    COMPLETED // Provider marked job as completed
+}
+
+enum JobPriority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+// ------------------------------------
+// Core Job Models
+// ------------------------------------
+model Job {
+    id String @id @default(uuid())
+
+    // Customer Information (from User Service)
+    customer_id    String // Link to User Service Customer ID
+    customer_email String // Cached for quick access
+
+    // Job Details
+    title       String
+    description String
+    category    String // Legacy field - keep for backward compatibility
+    categoryId  String? // New field - links to Category Service
+
+    // Location with enhanced radius support
+    location     String? // Address as string
+    location_lat Float? // Latitude for geospatial queries
+    location_lng Float? // Longitude for geospatial queries
+    maxRadius    Float?  @default(25) // Search radius for providers (km)
+
+    // Budget
+    budget_min Float?
+    budget_max Float?
+    currency   String @default("LKR")
+
+    // Scheduling
+    scheduled_at DateTime? // When customer wants job done
+    deadline     DateTime? // Latest completion date
+
+    // Status and Priority
+    status   JobStatus   @default(PENDING)
+    priority JobPriority @default(MEDIUM)
+
+    // Additional Information
+    notes        String? // Customer special instructions (eco-friendly, etc.)
+    requirements String? // Technical requirements
+
+    // Tracking
+    views        Int       @default(0)
+    created_at   DateTime  @default(now())
+    updated_at   DateTime  @updatedAt
+    published_at DateTime? // When job was made public
+    completed_at DateTime? // When job was completed
+
+    // Relationships
+    assignments   JobAssignment[]
+    attachments   JobAttachment[]
+    notifications JobNotification[]
+
+    @@index([customer_id])
+    @@index([status])
+    @@index([category])
+    @@index([created_at])
+    @@index([location_lat, location_lng])
+}
+
+model JobAssignment {
+    id             String @id @default(uuid())
+    job_id         String
+    provider_id    String // Link to User Service Provider ID
+    provider_email String // Cached for quick access
+
+    status       AssignmentStatus @default(ASSIGNED)
+    assigned_at  DateTime         @default(now())
+    accepted_at  DateTime?
+    completed_at DateTime?
+
+    // Provider's quote/bid information
+    quote_amount       Float?
+    quote_message      String?
+    estimated_duration String? // e.g., "2 hours", "1 day"
+
+    // Relationship
+    job Job @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+    @@unique([job_id, provider_id]) // One assignment per provider per job
+    @@index([job_id])
+    @@index([provider_id])
+    @@index([status])
+}
+
+model JobAttachment {
+    id          String   @id @default(uuid())
+    job_id      String
+    file_name   String
+    file_path   String
+    file_size   Int
+    mime_type   String
+    uploaded_at DateTime @default(now())
+
+    job Job @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+    @@index([job_id])
+}
+
+// ------------------------------------
+// Notification Models
+// ------------------------------------
+model JobNotification {
+    id         String   @id @default(uuid())
+    job_id     String
+    user_id    String // Can be customer or provider
+    type       String // "job_created", "assignment_received", "job_completed", etc.
+    title      String
+    message    String
+    is_read    Boolean  @default(false)
+    metadata   String? // JSON for additional data
+    created_at DateTime @default(now())
+
+    job Job @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+    @@index([user_id, is_read])
+    @@index([job_id])
+    @@index([created_at])
+}
+
+// ------------------------------------
+// Event Log for Microservice Communication
+// ------------------------------------
+model JobEvent {
+    id         String   @id @default(uuid())
+    job_id     String
+    event_type String // "job.created", "job.assigned", "job.completed", etc.
+    payload    String // JSON payload
+    published  Boolean  @default(false)
+    created_at DateTime @default(now())
+
+    @@index([job_id])
+    @@index([event_type])
+    @@index([published])
+}

@@ -1,0 +1,243 @@
+{
+  "info": {
+    "name": "WorkZone Job Service API",
+    "description": "Complete test collection for Job Service endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3002"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE"
+    },
+    {
+      "key": "job_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Create Job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const responseJson = pm.response.json();",
+              "    pm.collectionVariables.set('job_id', responseJson.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Fix Kitchen Plumbing\",\n  \"description\": \"Kitchen sink is leaking and needs urgent repair\",\n  \"category\": \"Plumbing\",\n  \"location\": \"Downtown Area\",\n  \"location_lat\": 40.7128,\n  \"location_lng\": -74.0060,\n  \"budget_min\": 100.00,\n  \"budget_max\": 300.00,\n  \"priority\": \"HIGH\",\n  \"job_type\": \"ONE_TIME\",\n  \"deadline\": \"2025-09-01T10:00:00Z\",\n  \"requirements\": [\"Licensed plumber\", \"Available weekends\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/jobs",
+          "host": ["{{base_url}}"],
+          "path": ["jobs"]
+        }
+      }
+    },
+    {
+      "name": "Get All Jobs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["jobs"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "status",
+              "value": "OPEN",
+              "disabled": true
+            },
+            {
+              "key": "category",
+              "value": "Plumbing",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Job by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs/{{job_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "{{job_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Get My Jobs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs/my-jobs",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "my-jobs"]
+        }
+      }
+    },
+    {
+      "name": "Get Assigned Jobs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs/assigned-jobs",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "assigned-jobs"]
+        }
+      }
+    },
+    {
+      "name": "Update Job",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"OPEN\",\n  \"budget_max\": 350.00,\n  \"description\": \"Kitchen sink is leaking badly and needs urgent repair - updated description\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/jobs/{{job_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "{{job_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Assign Job to Provider",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceProviderId\": \"provider-user-id-123\",\n  \"quoteAmount\": 250.00,\n  \"estimatedDuration\": \"2 hours\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/jobs/{{job_id}}/assign",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "{{job_id}}", "assign"]
+        }
+      }
+    },
+    {
+      "name": "Complete Job",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs/{{job_id}}/complete",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "{{job_id}}", "complete"]
+        }
+      }
+    },
+    {
+      "name": "Delete Job",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs/{{job_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["jobs", "{{job_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Search Jobs by Location",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/jobs?lat=40.7128&lng=-74.0060&radius=10&category=Plumbing",
+          "host": ["{{base_url}}"],
+          "path": ["jobs"],
+          "query": [
+            {
+              "key": "lat",
+              "value": "40.7128"
+            },
+            {
+              "key": "lng",
+              "value": "-74.0060"
+            },
+            {
+              "key": "radius",
+              "value": "10"
+            },
+            {
+              "key": "category",
+              "value": "Plumbing"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

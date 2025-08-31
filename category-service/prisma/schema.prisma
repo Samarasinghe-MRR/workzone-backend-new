@@ -1,0 +1,51 @@
+// Category Service Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  parentId    String?
+  isActive    Boolean @default(true)
+
+  // Self-referencing relationship for hierarchical categories
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String? // Admin user ID who created this category
+
+  // Performance indexes
+  @@index([parentId])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model CategoryAuditLog {
+  id          String         @id @default(cuid())
+  categoryId  String
+  action      CategoryAction
+  oldData     Json?
+  newData     Json?
+  performedBy String // Admin user ID
+  performedAt DateTime       @default(now())
+
+  @@map("category_audit_logs")
+}
+
+enum CategoryAction {
+  CREATED
+  UPDATED
+  DELETED
+  ACTIVATED
+  DEACTIVATED
+}

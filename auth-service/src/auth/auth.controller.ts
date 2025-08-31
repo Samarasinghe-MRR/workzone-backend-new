@@ -102,4 +102,24 @@ export class AuthController {
     const user = await this.authService.validateOrCreateGoogleUser(req.user);
     return this.authService.login(user); // returns JWT
   }
+
+  @Post('validate')
+  @ApiOperation({ summary: 'Validate JWT token for microservices' })
+  @UseGuards(AuthGuard('jwt'))
+  validateToken(@Req() req: any) {
+    // The JWT strategy already validates the token and populates req.user
+    return {
+      valid: true,
+      user: {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        userId: req.user?.userId || req.user?.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        email: req.user?.email,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        userType: req.user?.userType || req.user?.role,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        role: req.user?.role || 'user',
+      },
+    };
+  }
 }

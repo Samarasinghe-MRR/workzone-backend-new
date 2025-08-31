@@ -36,11 +36,22 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# Auth Service Specific Ignores
+
+# JWT keys (if stored locally)
+jwt-keys/
+
+# Session storage
+sessions/
+
+# OAuth provider files
+oauth-cache/
+
+# Password reset tokens cache
+reset-tokens/
+
+# Email templates cache
+email-cache/
 
 # temp directory
 .temp

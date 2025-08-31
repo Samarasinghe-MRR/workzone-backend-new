@@ -40,17 +40,37 @@ model Role {
 }
 
 model ServiceProviderProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  category        String
-  experienceYears Int
-  location        String
-  latitude        Float // new
-  longitude       Float // new
-  rating          Float    @default(0)
-  availability    Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  user            User     @relation(fields: [userId], references: [id])
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  category            String
+  experienceYears     Int
+  location            String
+  latitude            Float // Geographic location
+  longitude           Float // Geographic location
+  serviceRadius       Float    @default(25) // Service area radius in km
+  averageResponseTime Int      @default(2) // Response time in hours
+  rating              Float    @default(0)
+  availability        Boolean  @default(true)
+  isAvailable         Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id])
+
+  // Provider specializations - links to Category Service
+  specializations ProviderSpecialization[]
+}
+
+// New model for provider specializations
+model ProviderSpecialization {
+  id         String   @id @default(uuid())
+  providerId String
+  categoryId String // References Category Service categories
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  provider ServiceProviderProfile @relation(fields: [providerId], references: [id])
+
+  @@unique([providerId, categoryId])
+  @@map("provider_specializations")
 }
 
 model CustomerProfile {

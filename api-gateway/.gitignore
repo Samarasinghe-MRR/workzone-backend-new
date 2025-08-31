@@ -1,0 +1,14 @@
+# API Gateway Specific Ignores
+
+# Route cache
+route-cache/
+
+# Proxy logs
+proxy-logs/
+
+# Load balancer configs
+lb-config/
+
+# SSL certificates (if stored locally)
+ssl/
+certs/

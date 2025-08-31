@@ -1,0 +1,15 @@
+# Quotation Service Specific Ignores
+
+# Quotation documents
+quotation-docs/
+uploads/quotations/
+
+# PDF exports
+quote-pdfs/
+quotation-exports/
+
+# Quotation templates
+quote-templates/
+
+# Price calculation cache
+price-cache/

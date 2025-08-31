@@ -4,7 +4,7 @@
 // @Injectable()
 // export class UserService {}
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 //import { UpdateUserDto } from '../dto/update-user.dto';
 //import { User } from '../../generated/prisma'; // Adjust path as needed
@@ -13,6 +13,10 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { CreateUserProfileDto } from '../dto/create-user-profile.dto';
 import { RoleService } from './role.service';
 import { ProfileService } from './profile.service';
+import {
+  CustomerDataAggregationService,
+  CustomerAggregatedData,
+} from './customer-data-aggregation.service';
 
 @Injectable()
 export class UserService {
@@ -20,6 +24,7 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly roleService: RoleService,
     private readonly profileService: ProfileService,
+    private readonly customerDataAggregationService: CustomerDataAggregationService,
   ) {}
 
   async findUserById(id: string) {
@@ -32,6 +37,51 @@ export class UserService {
         adminProfile: true,
       },
     });
+  }
+
+  // NEW: Get comprehensive customer data across all microservices
+  async getCustomerComprehensiveData(
+    id: string,
+    userToken?: string,
+  ): Promise<CustomerAggregatedData> {
+    // First get user data from User Service
+    const user = await this.findUserById(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Then aggregate data from other microservices
+    const aggregatedData =
+      await this.customerDataAggregationService.getCustomerAggregatedData(
+        id,
+        userToken,
+      );
+
+    return {
+      ...aggregatedData,
+      user: user, // Include complete user profile
+    };
+  }
+
+  // NEW: Get comprehensive provider data across all microservices
+  async getProviderComprehensiveData(id: string, userToken?: string) {
+    // First get user data from User Service
+    const user = await this.findUserById(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Then aggregate data from other microservices
+    const aggregatedData =
+      await this.customerDataAggregationService.getProviderAggregatedData(
+        id,
+        userToken,
+      );
+
+    return {
+      ...aggregatedData,
+      user: user, // Include complete user profile
+    };
   }
 
   async findUserByEmail(email: string) {

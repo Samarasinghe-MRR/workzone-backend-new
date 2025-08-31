@@ -1,0 +1,11 @@
+# Category Service Specific Ignores
+
+# Category icons/images
+category-icons/
+uploads/categories/
+
+# Category export files
+category-exports/
+
+# Category tree cache
+tree-cache/
